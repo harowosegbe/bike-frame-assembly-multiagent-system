@@ -15,12 +15,13 @@
 /*
     1. Secondary Agent Function
 
-    Robotic Arm - 
-    Moving Agent - 
-    Secondary Holding Agent - 
-    Welding Agent - 
+    Robotic Arm
+    Moving Agent
+    Secondary Holding Agent
+    Welding Agent
 
 */
+
 
 /*
     Robotic Arm Agent Function
@@ -108,100 +109,105 @@ FUNCTION ConfirmPartGoal(HoldingAgentMain, partId)
 ENDFUNCTION
 
 
-// Gets the part from the Bin
+// Resets the holdingArm, this function drops the part that has been welded
 
 FUNCTION Reset()
+    ResetHoldingArm()
     SET holdingPart = false
 ENDFUNCTION
+
 
 /*
     Welding Holding Agent Function
 
-    
+    This functions recieves requests from the main holding agent, welds the part at the desired point and resets the holding agent.
 
 */
 
+SET isIdle = true
+
+FUNCTION WeldParts(mainHoldingAgent, requestingHoldingAgents = [], weldingPoints)
+
+    IF isIdle is true THEN
+        SET isIdle = false
+
+        Weld(weldingPoints, requestingHoldingAgents)
+
+        mainHoldingAgent.FinishedWelding()
+
+        FOR holdingAgents in requestingHoldingAgents
+            holdingAgents.Reset()
+        ENDFOR
+    
+    ENDIF
+
+ENDFUNCTION  
 
 
+/*
+    Moving Agent Function
 
-// 4. Definition of Termination Criteria
+    This function checks if the main holding agent has completed the assembly, gets the assembled frame and delivers it
 
-FUNCTION calculateTerminationCriteria ()
-    IF penalties is equal to 0 THEN 
-        RETURN true
-    ELSE IF currentIteration is greater than or equals maxInteration THEN
+*/
+
+FUNCTION GetWeldedBike(mainHoldingAgent)
+    IF mainHoldingAgent.hasCompletedAssembly() is true THEN
+        RequestBike()
+        DeliverBike()
+    ENDIF
+ENDFUNCTION
+
+
+/*
+    2. Primary/Main Holding Agent Function
+
+    This fucntions extends the secondary holding agent
+    It serves as the MAS brain and coordinates all actions
+*/
+
+SET isMain = true
+SET holdingPart = false
+SET currentPartners = [][]
+SET partsConnected = 0
+SET partsGoal = input ("Number of welded parts points required")
+SET secondaryHoldingAgents = []
+SET frameAssemblySteps = [][] // Blueprints of welded parts, required robotic arms, parts and welding points
+
+FUNCTION MainHoldingAgent() EXTENDS SecondaryHoldingAgent
+
+    // Check if we have completed the goal
+    IF partsConnected is not equals to partsGoal THEN
+
+        FOR currentAssembly in frameAssemblySteps
+            SET currentHoldingAgents = []
+            FOR agents in secondaryHoldingAgents 
+                SET currentHoldingAgents[i] = agents
+                agents.HoldFramePart(currentAssembly.roboticArmId, currentAssembly.getNextPartId, THIS)
+            ENDFOR
+
+            WeldParts(THIS, currentHoldingAgents, currentAssembly.weldPoint)
+        ENDFOR
+
+        GetWeldedBike(THIS)
+    ENDIF
+
+ENDFUNCTION
+
+// Increment the parts connected goal
+FUNCTION FinishedWelding()
+    INCREMENT partsConnected
+    BroadcastEvent()
+ENDFUNCTION
+
+// Return a boolean if the frame as been assembled succesfully
+FUNCTION hasCompletedAssembly()
+    IF partsConnected is equals to partsGoal THEN
         RETURN true
     ELSE 
         RETURN false
     ENDIF
 ENDFUNCTION
 
-SET terminationCriteria = calculateTerminationCriteria()
 
-
-// 5. Generation of Initial Random Population
-SET population = []
-
-FOR i = 1 to populationCapacity
-    SET chromosome = createRandomChromosome()
-    ADD chromosome to population
-ENDFOR
-
-
-// 6. Solution Search Routine
-
-SET solution = []
-SET generationSequenceNumber = 1
-SET globalBestChromosome = []
-
-WHILE terminationCriteria is equals to false
-    SET currentBestChromosome = getFittestChromosome(population)
-    IF Fitness in globalBestChromosome is less than Fitness in currentBestChromosome THEN
-        SET globalBestChromosome = currentBestChromosome
-    ENDIF
-    /*
-        after this step the population contains only the n fittest chromosomes
-    */
-    applyElitismOperator(population)
-    applyDiversityOperator(population)
-    WHILE Size in population < populationCapacity
-        SET [parent1, parent2] = doTournament(currentGeneration)
-        SET [child1, child2] = applyCrossoverOperator(parent1, parent2)
-        applyMutationOperator(child1)
-        applyMutationOperator(child2)
-        ADD child to population
-        ADD child2 to population
-    ENDWHILE
-    INCREMENT globalBestChromosome
-ENDWHILE
-
-IF Fitness in globalBestChromosome is equals 0 THEN
-    SET solution = globalBestChromosome
-ENDIF
-
-
-/*
-    7. Output Mapping
-
-    Convert Integers to Letters and display it in the GUI
-
-    OUTPUT displays on a 4x4 grid
-*/
-
-
-FUNCTION getCharacter (number)
-    IF inputMapping contain number THEN
-        RETURN the key value
-    ENDIF
-ENDFUNCTION
-
-
-FOR i = 0 in solution
-    IF i + 1 /4 is equals to 0 THEN
-        moveCursorToNextGrid()
-        OUTPUT getCharacter(i in solution)
-    ELSE
-        OUTPUT getCharacter(i in solution)
-    ENDIF
-ENDFOR
 
