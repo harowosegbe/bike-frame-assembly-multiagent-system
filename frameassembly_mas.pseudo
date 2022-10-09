@@ -1,0 +1,207 @@
+/*
+    Bike Frame Assembly Multi-Agent System Pseudocode
+
+    Hammed Arowosegbe 
+    Sen Chai 
+    Gauri Mahangare
+    Natchar Ratanasirigulchai 
+
+    CSK 504 Multi-Agents Systems
+
+    The Design utilizes a Primary and Secondary Architecture, the 1 Holding Agent been the primaty brain
+*/
+
+
+/*
+    1. Secondary Agent Function
+
+    Robotic Arm - 
+    Moving Agent - 
+    Secondary Holding Agent - 
+    Welding Agent - 
+
+*/
+
+/*
+    Robotic Arm Agent Function
+
+    Here the robotic arm recieves a request from an holding agent gets the frame part from the bin
+    and delivers it to the requesting holding agent
+
+*/
+
+SET isIdle = true
+
+// Recieves request from Holding Agent
+
+FUNCTION GetPartFromRoboticArm(holdingPart, partId, requestingAgentId)
+
+    IF isIdle is false THEN
+        RETURN error
+    ENDIF
+
+    SET isIdle = false
+    GetPart(partId)
+    DeliverPart(requestingAgentId)
+    SET isIdle = true
+
+ENDFUNCTION  
+
+
+// Gets the part from the Bin
+
+FUNCTION GetPart(partId)
+    IF partId does exist in CheckItemFromBin() THEN
+        WHILE roboticArmTip has not grabbed part
+            MoveRoboticArmAndGrab()
+        ENDWHILE
+    ENDIF
+ENDFUNCTION
+
+
+// Delivers the part to the requesting holding agent
+
+FUNCTION DeliverPart(requestingAgentId)
+    WHILE roboticArm has not delivered part to requestingAgentId
+        MoveRoboticArmAndDeliver()
+    ENDWHILE
+ENDFUNCTION
+
+
+/*
+    Secondary Holding Agent Function
+
+    Here the holding agent confirms parts to the welded and request parts from robotic arm
+
+*/
+
+SET isMain = false
+SET holdingPart = false
+
+// Recieves request from Main Holding Agent on frame part to hold
+
+FUNCTION HoldFramePart(roboticAgentId, partId, HoldingAgentMain)
+
+    IF holdingPart is true THEN
+        RETURN error
+    ENDIF
+
+    //Here we allow the main holding agent to register the secondary holding agent
+    HoldingAgentMain.AcceptPartnership(THIS)
+
+    ConfirmPartGoal(HoldingAgentMain,partId)
+    GetPartFromRoboticArm(roboticAgentId, partId, THIS)
+    
+    SET holdingPart = true
+
+ENDFUNCTION  
+
+
+// Gets the part from the Bin
+
+FUNCTION ConfirmPartGoal(HoldingAgentMain, partId)
+    IF partId exist in HoldingAgentMain.currentPartGoal THEN
+        HoldingAgentMain.RemovePartGoal(partId)
+    ELSE
+        RETURN error    
+    ENDIF
+ENDFUNCTION
+
+
+// Gets the part from the Bin
+
+FUNCTION Reset()
+    SET holdingPart = false
+ENDFUNCTION
+
+/*
+    Welding Holding Agent Function
+
+    
+
+*/
+
+
+
+
+// 4. Definition of Termination Criteria
+
+FUNCTION calculateTerminationCriteria ()
+    IF penalties is equal to 0 THEN 
+        RETURN true
+    ELSE IF currentIteration is greater than or equals maxInteration THEN
+        RETURN true
+    ELSE 
+        RETURN false
+    ENDIF
+ENDFUNCTION
+
+SET terminationCriteria = calculateTerminationCriteria()
+
+
+// 5. Generation of Initial Random Population
+SET population = []
+
+FOR i = 1 to populationCapacity
+    SET chromosome = createRandomChromosome()
+    ADD chromosome to population
+ENDFOR
+
+
+// 6. Solution Search Routine
+
+SET solution = []
+SET generationSequenceNumber = 1
+SET globalBestChromosome = []
+
+WHILE terminationCriteria is equals to false
+    SET currentBestChromosome = getFittestChromosome(population)
+    IF Fitness in globalBestChromosome is less than Fitness in currentBestChromosome THEN
+        SET globalBestChromosome = currentBestChromosome
+    ENDIF
+    /*
+        after this step the population contains only the n fittest chromosomes
+    */
+    applyElitismOperator(population)
+    applyDiversityOperator(population)
+    WHILE Size in population < populationCapacity
+        SET [parent1, parent2] = doTournament(currentGeneration)
+        SET [child1, child2] = applyCrossoverOperator(parent1, parent2)
+        applyMutationOperator(child1)
+        applyMutationOperator(child2)
+        ADD child to population
+        ADD child2 to population
+    ENDWHILE
+    INCREMENT globalBestChromosome
+ENDWHILE
+
+IF Fitness in globalBestChromosome is equals 0 THEN
+    SET solution = globalBestChromosome
+ENDIF
+
+
+/*
+    7. Output Mapping
+
+    Convert Integers to Letters and display it in the GUI
+
+    OUTPUT displays on a 4x4 grid
+*/
+
+
+FUNCTION getCharacter (number)
+    IF inputMapping contain number THEN
+        RETURN the key value
+    ENDIF
+ENDFUNCTION
+
+
+FOR i = 0 in solution
+    IF i + 1 /4 is equals to 0 THEN
+        moveCursorToNextGrid()
+        OUTPUT getCharacter(i in solution)
+    ELSE
+        OUTPUT getCharacter(i in solution)
+    ENDIF
+ENDFOR
+
